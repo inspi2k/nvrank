@@ -1,1 +1,1 @@
-web: python rank.py
+web: xpython rank.py
