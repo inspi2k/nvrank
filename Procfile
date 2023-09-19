@@ -1,1 +1,1 @@
-worker: python ./rank.py
+web: yarn start:python rank.py
