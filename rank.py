@@ -5,11 +5,12 @@ import gspread  # pip install gspread
 import re
 import warnings
 import ssl
+import sys
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
-# Variable list
-param_display = 100  # 찾아오는 아이템 단위 get_nv_api (max:100)
+# parameter 0:시트기록 x  / 1:시트기록 o
+is_write = 1
 
 # Naver Search API id, secret key (cg-lab)
 CLIENT_ID = "4L9CRB_dZ8HKe4R1WmNL"
@@ -29,155 +30,103 @@ try:
     doc = gc.open_by_url(gs_url)
     worksheet = doc.worksheet(gs_sheet_keyword)
 
-    list_check = worksheet.col_values(1)
-    list_storename = worksheet.col_values(2)
-    list_keyword = worksheet.col_values(3)
-    list_catalog_title = worksheet.col_values(4)
-    list_rank = ["rank"]
+    items = worksheet.get_all_records()
+    # print(list_of_keyword)
 
     print("{} \tfinish for google sheet reading".format(datetime.datetime.now()))
+
 except Exception as e:
     print("google sheet reading error:", e)
 
-# print(list_check)
-# print(list_storename)
-# print(list_keyword)
-# print(list_catalog_title)
-# print(list_rank)
+# sys.exit(0)
+list_of_search = []
 
 
 # Naver Search API
-def get_nv_api(
-    sstore,
-    ccatalog_t,
-    kkeyword,
-    pparam_start=1,
-    pparam_display=100,
-    rrank=0,
-    ffind_rank=0,
-):
+def get_nv_api(sstore, ccatalog_t, kkeyword):
     encText = urllib.parse.quote(kkeyword)
-    url = "https://openapi.naver.com/v1/search/shop"
-    if pparam_start == 1:
-        pparam_display -= 1
-    url += (
-        "?start={}".format(pparam_start)
-        + "&display={}".format(pparam_display)
-        + "&query="
-        + encText
-    )
-    # print("s:{}/d:{}/k:{}".format(pparam_start,pparam_display,kkeyword))
-    if pparam_start == 1:
-        pparam_display += 1
 
-    request = urllib.request.Request(url)
-    request.add_header("X-Naver-Client-Id", CLIENT_ID)
-    request.add_header("X-Naver-Client-Secret", CLIENT_SECRET)
-    response = urllib.request.urlopen(request)
-    rescode = response.getcode()
-    if rescode == 200:
-        response_body = response.read()
-    else:
-        print("Error Code:" + rescode)
-        return -1, -1
+    pparam_start = 1
+    rrank = 0
+    list_return = []
 
-    data = json.loads(response_body.decode("utf-8"))  # JSON 형태의 문자열 읽기
+    while pparam_start <= 1000:
+        if pparam_start == 1:
+            pparam_display = 99
+        else:
+            pparam_display = 100  # 찾아오는 아이템 단위 get_nv_api (max:100)
+        url = "https://openapi.naver.com/v1/search/shop"
+        url += (
+            "?start={}".format(pparam_start)
+            + "&display={}".format(pparam_display)
+            + "&query="
+            + encText
+        )
 
-    for item in data["items"]:
-        rrank += 1
-        # print("productType={}, cat_title={}, title={}".format(item['productType'],ccatalog_t,re.sub('(<([^>]+)>)','',item['title'])))
-        if (sstore in item["mallName"]) or (
-            ccatalog_t != "" and ccatalog_t in re.sub("(<([^>]+)>)", "", item["title"])
-        ):
-            ffind_rank = 1
-            break
+        request = urllib.request.Request(url)
+        request.add_header("X-Naver-Client-Id", CLIENT_ID)
+        request.add_header("X-Naver-Client-Secret", CLIENT_SECRET)
+        response = urllib.request.urlopen(request)
+        rescode = response.getcode()
+        if rescode == 200:
+            response_body = response.read()
+        else:
+            print("Error Code:" + rescode)
+            return []
 
-    return rrank, ffind_rank
+        data = json.loads(response_body.decode("utf-8"))  # JSON 형태의 문자열 읽기
+
+        for prd in data["items"]:
+            if (sstore in prd["mallName"]) or (
+                ccatalog_t != ""
+                and ccatalog_t in re.sub("(<([^>]+)>)", "", prd["title"])
+            ):
+                # ffind_rank = 1
+                list_return.append(
+                    {
+                        "storename": sstore,
+                        "keyword": kkeyword,
+                        "mid": prd["productId"],
+                        "rank": pparam_start,
+                    }
+                )
+
+                num_page = (pparam_start - 1) // 40 + 1
+                num_ppos = (pparam_start - 1) % 40 + 1
+                print(
+                    "{} \tRank:{:>3} ({:>2}p {:>2}) {} / {} ({}) {}".format(
+                        datetime.datetime.now(),
+                        pparam_start,
+                        num_page,
+                        num_ppos,
+                        kkeyword,
+                        sstore,
+                        prd["productId"],
+                        re.sub("(<([^>]+)>)", "", prd["title"]),
+                    ),
+                    flush=True,
+                )
+            pparam_start += 1
+
+    return list_return
 
 
+# google sheet - search, storename, keyword, catalog_title, startdate
 # 1.1. 키워드만큼 반복하며 순위 조회 루틴 시작
 try:
-    for key_i in range(1, len(list_check)):
-        #        if(key_i > len(list_check)):
-        #            list_check.insert(key_i,"")
-        #            list_rank.insert(key_i, "")
-        #            continue
-
-        if list_check[key_i] == "":
-            list_keyword[key_i] = ""
-
-        keyword = list_keyword[key_i]
-        if keyword == "":
-            list_rank.insert(key_i, "")
+    for item in items:
+        if item["search"] == "":
             continue
 
-        storename = list_storename[key_i]
-        if key_i < len(list_catalog_title):
-            catalog_title = list_catalog_title[key_i]
-        else:
-            catalog_title = ""
-
-        rank = 0
-        find_rank = 0
-
-        param_start = 1
-
-        # print("{} \tindex={} \tstarting for keyword:{}(catalog:{})".format(datetime.datetime.now(), key_i, keyword, catalog))
-
         # 2. 순위 찾기 루틴
-        # catalog 가격비교상품 / 일반상품
-        while find_rank == 0:
-            if param_start > 1000:
-                break
+        list_r = get_nv_api(item["storename"], item["catalog_title"], item["keyword"])
 
-            # print("find_rank:{}\tget_nv_api(start:{},display:{},keyword:{})".format(find_rank,param_start,param_display,keyword))
-            (rank, find_rank) = get_nv_api(
-                storename,
-                catalog_title,
-                keyword,
-                param_start,
-                param_display,
-                rank,
-                find_rank,
-            )
+        for l in list_r:
+            list_of_search.append(l)
 
-            if find_rank == 1:
-                list_rank.insert(key_i, rank)
-                # print("found it in keyword({})".format(keyword))
-
-            # if (param_start % 5==0): print(".", end="")
-
-            if param_start == 1:
-                param_start = param_display
-            else:
-                param_start += param_display
-
-        # print("key_i={} find_rank={}, rank={}, keyword={}".format(key_i, find_rank, rank, keyword))
-        if find_rank == 0 and rank > 1:
-            list_rank.insert(key_i, 0)
-            rank = ""
-            # print("not found it in keyword({})".format(keyword))
-
-        if rank == "":
-            num_page = ""
-            num_ppos = ""
-        else:
-            num_page = (rank - 1) // 40 + 1
-            num_ppos = (rank - 1) % 40 + 1
-        print(
-            "{} \tRank:{:>3} ({:>2}p {:>2}) {} / {}".format(
-                datetime.datetime.now(), rank, num_page, num_ppos, keyword, storename
-            )
-        )
 except IndexError as e:
     print("Index Error:", e)
-    print("key_i=", key_i)
-
-    print(list_check)
-    print(list_storename)
-    print(list_keyword)
-    print(list_catalog_title)
-    print(list_rank)
+    print("item=", item)
 
 except Exception as e:
     print("Error:", e)
@@ -185,7 +134,7 @@ except Exception as e:
 
 # 3. 구글 시트에 기록
 try:
-    if list_check[0] == "1":
+    if is_write != 0:
         print("{} \tstart for google sheet writing".format(datetime.datetime.now()))
 
         wsheet = doc.worksheet(gs_sheet_rank)
@@ -195,19 +144,20 @@ try:
         list_values = []
         counter = 0
 
-        for key_i in range(1, len(list_check)):
-            if list_check[key_i] == "":
-                continue
-
+        for search in list_of_search:
             counter += 1
             list_row = []
             list_row.append(datetime.datetime.now().strftime("%Y-%m-%d"))
             list_row.append(datetime.datetime.now().strftime("%H:%M:%S"))
             list_row.append(1)
-            list_row.append(list_storename[key_i])
-            list_row.append(list_keyword[key_i])
-            list_row.append(list_rank[key_i])
-            list_row.append((int(list_rank[key_i]) - 1) // 40 + 1)
+            # list_row.append(list_storename[key_i])
+            # list_row.append(list_keyword[key_i])
+            # list_row.append(list_rank[key_i])
+            # list_row.append((int(list_rank[key_i]) - 1) // 40 + 1)
+            list_row.append(search["storename"])
+            list_row.append(search["keyword"])
+            list_row.append(search["mid"])
+            list_row.append(search["rank"])
             list_values.append(list_row)
 
         # print(list_values)
