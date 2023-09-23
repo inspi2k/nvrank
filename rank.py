@@ -57,7 +57,6 @@ def get_nv_api(sstore, ccatalog_t, kkeyword):
     encText = urllib.parse.quote(kkeyword)
 
     pparam_start = 1
-    rrank = 0
     list_return = []
 
     while pparam_start <= 1000:
