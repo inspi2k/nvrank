@@ -6,11 +6,21 @@ import re
 import warnings
 import ssl
 import sys
+import turtle
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # parameter 0:시트기록 x  / 1:시트기록 o
-is_write = 1
+# is_write = 1
+turtle.setup(width=600, height=200, startx=0, starty=0)
+turtle.title("Tracing Writing Check")
+is_write = turtle.numinput(
+    title="시트에 기록하시겠습니까?", prompt="(1:기록/0:무기록)", default=1, minval=0, maxval=1
+)
+turtle.bye()
+
+if is_write == None:
+    sys.exit(1)
 
 # Naver Search API id, secret key (cg-lab)
 CLIENT_ID = "4L9CRB_dZ8HKe4R1WmNL"
