@@ -7,20 +7,35 @@ import warnings
 import ssl
 import sys
 import turtle
+import pyautogui
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # parameter 0:시트기록 x  / 1:시트기록 o
 # is_write = 1
-turtle.setup(width=600, height=200, startx=0, starty=0)
-turtle.title("Tracing Writing Check")
-is_write = turtle.numinput(
-    title="시트에 기록하시겠습니까?", prompt="(1:기록/0:무기록)", default=1, minval=0, maxval=1
-)
-turtle.bye()
+# turtle.setup(width=600, height=200, startx=0, starty=0)
+# turtle.title("Tracing Writing Check")
+# is_write = turtle.numinput(
+#     title="시트에 기록하시겠습니까?", prompt="(1:기록/0:무기록)", default=1, minval=0, maxval=1
+# )
+# turtle.bye()
+is_write = pyautogui.prompt("(1:기록/0:무기록)", "시트에 기록하시겠습니까?", default=1)
 
 if is_write == None:
     sys.exit(1)
+
+if is_write != "0" or is_write != "1":
+    pyautogui.alert("1 또는 0을 입력하세요\n프로그램을 종료합니다")
+    sys.exit(1)
+
+is_write = int(is_write)
+
+if is_write == 0:
+    msg = "결과를 시트에 기록하지 않습니다"
+else:
+    msg = "결과를 시트에 기록합니다"
+msg += "\n[OK]를 누르시고 잠시 기다려주세요"
+pyautogui.alert(msg)
 
 # Naver Search API id, secret key (cg-lab)
 CLIENT_ID = "4L9CRB_dZ8HKe4R1WmNL"
@@ -115,6 +130,7 @@ def get_nv_api(sstore, ccatalog_t, kkeyword):
                     ),
                     flush=True,
                 )
+                # pyautogui.confirm(kkeyword, pparam_start)
             pparam_start += 1
 
     return list_return
@@ -129,6 +145,11 @@ try:
 
         # 2. 순위 찾기 루틴
         list_r = get_nv_api(item["storename"], item["catalog_title"], item["keyword"])
+
+        if len(list_r) < 1:
+            print(
+                "Can't search '{}' in '{}'".format(item["keyword"], item["storename"])
+            )
 
         for l in list_r:
             list_of_search.append(l)
@@ -175,5 +196,7 @@ try:
         warnings.filterwarnings(action="default")
 
         print("{} \tfinish for google sheet writing".format(datetime.datetime.now()))
+
+        # pyautogui.confirm(list_values)
 except Exception as e:
     print("writing sheet exception:", e)
