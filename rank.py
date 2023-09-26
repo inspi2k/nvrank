@@ -6,27 +6,19 @@ import re
 import warnings
 import ssl
 import sys
-import turtle
 import pyautogui
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # parameter 0:시트기록 x  / 1:시트기록 o
-# is_write = 1
-# turtle.setup(width=600, height=200, startx=0, starty=0)
-# turtle.title("Tracing Writing Check")
-# is_write = turtle.numinput(
-#     title="시트에 기록하시겠습니까?", prompt="(1:기록/0:무기록)", default=1, minval=0, maxval=1
-# )
-# turtle.bye()
 is_write = pyautogui.prompt("(1:기록/0:무기록)", "시트에 기록하시겠습니까?", default=1)
 
 if is_write == None:
     sys.exit(1)
 
-if is_write != "0" or is_write != "1":
-    pyautogui.alert("1 또는 0을 입력하세요\n프로그램을 종료합니다")
-    sys.exit(1)
+# if is_write != "0" or is_write != "1":
+#     pyautogui.alert("1 또는 0을 입력하세요\n프로그램을 종료합니다")
+#     sys.exit(1)
 
 is_write = int(is_write)
 
@@ -46,25 +38,6 @@ gs_json = "cglab-python-9750d891fb6e.json"
 gs_url = "https://docs.google.com/spreadsheets/d/18O363rcAZY7bz6l7BAjCcekyx08Ytv1Ana1LLtO8Uhs"
 gs_sheet_keyword = "list"
 gs_sheet_rank = "rank"
-
-# 1. 구글 시트에서 순위 조회할 리스트 가져오기
-try:
-    print("{} \tstart for google sheet reading".format(datetime.datetime.now()))
-
-    gc = gspread.service_account(filename="./" + gs_json)
-    doc = gc.open_by_url(gs_url)
-    worksheet = doc.worksheet(gs_sheet_keyword)
-
-    items = worksheet.get_all_records()
-    # print(list_of_keyword)
-
-    print("{} \tfinish for google sheet reading".format(datetime.datetime.now()))
-
-except Exception as e:
-    print("google sheet reading error:", e)
-
-# sys.exit(0)
-list_of_search = []
 
 
 # Naver Search API
@@ -136,8 +109,27 @@ def get_nv_api(sstore, ccatalog_t, kkeyword):
     return list_return
 
 
+# 1. 구글 시트에서 순위 조회할 리스트 가져오기
+try:
+    print("{} \tstart for google sheet reading".format(datetime.datetime.now()))
+
+    gc = gspread.service_account(filename="./" + gs_json)
+    doc = gc.open_by_url(gs_url)
+    worksheet = doc.worksheet(gs_sheet_keyword)
+
+    items = worksheet.get_all_records()
+    # print(list_of_keyword)
+
+    print("{} \tfinish for google sheet reading".format(datetime.datetime.now()))
+
+except Exception as e:
+    print("google sheet reading error:", e)
+
+# sys.exit(0)
+list_of_search = []
+
 # google sheet - search, storename, keyword, catalog_title, startdate
-# 1.1. 키워드만큼 반복하며 순위 조회 루틴 시작
+# 1.1. 키워드만큼 반복하며 순위 조회 루틴 시작 - get_nv_api()
 try:
     for item in items:
         if item["search"] == "":
@@ -161,7 +153,6 @@ except IndexError as e:
 except Exception as e:
     print("Error:", e)
 
-
 # 3. 구글 시트에 기록
 try:
     if is_write != 0:
@@ -180,10 +171,6 @@ try:
             list_row.append(datetime.datetime.now().strftime("%Y-%m-%d"))
             list_row.append(datetime.datetime.now().strftime("%H:%M:%S"))
             list_row.append(1)
-            # list_row.append(list_storename[key_i])
-            # list_row.append(list_keyword[key_i])
-            # list_row.append(list_rank[key_i])
-            # list_row.append((int(list_rank[key_i]) - 1) // 40 + 1)
             list_row.append(search["storename"])
             list_row.append(search["keyword"])
             list_row.append(search["mid"])
