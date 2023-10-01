@@ -11,7 +11,7 @@ import pyautogui
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # parameter 0:시트기록 x  / 1:시트기록 o
-is_write = pyautogui.prompt("(1:기록/0:무기록)", "시트에 기록하시겠습니까?", default=1)
+is_write = pyautogui.prompt("(1:기록/0:무기록)", "시트에 기록하시겠습니까?", default=0)
 
 if is_write == None:
     sys.exit(1)
@@ -24,9 +24,31 @@ is_write = int(is_write)
 
 if is_write == 0:
     msg = "결과를 시트에 기록하지 않습니다"
-else:
+elif is_write == 1:
     msg = "결과를 시트에 기록합니다"
-msg += "\n[OK]를 누르시고 잠시 기다려주세요"
+else:
+    pyautogui.alert("1 또는 0을 입력하세요")
+    sys.exit(1)
+# msg += "\n[OK]를 누르시고 잠시 기다려주세요"
+# pyautogui.alert(msg)
+
+is_mid = pyautogui.prompt(
+    "(1:정해진 상품(MID)만 순위 검색 / 0:스토어 내 모든 상품 순위 검색)", "어떤 상품의 순위를 찾습니까?", default=1
+)
+
+if is_mid == None:
+    sys.exit(1)
+
+is_mid = int(is_mid)
+
+if is_mid == 1:
+    msg += "\n\n정해진 상품만 순위 검색합니다 (MID)"
+elif is_mid == 0:
+    msg += "\n\n스토어의 모든 상품의 순위 검색합니다"
+else:
+    pyautogui.alert("1 또는 0을 입력하세요")
+    sys.exit(1)
+msg += "\n\n[OK]를 누르시고 잠시 기다려주세요"
 pyautogui.alert(msg)
 
 # Naver Search API id, secret key (cg-lab)
@@ -40,22 +62,25 @@ gs_sheet_keyword = "list"
 gs_sheet_rank = "rank"
 
 
-# Naver Search API
-def get_nv_api(sstore, ccatalog_t, kkeyword):
+# Naver Search API - https://developers.naver.com
+def get_nv_api(sstore, kkeyword, ccatalog_t, mmid):
+    # print("{} - {} - {} - {}".format(sstore, kkeyword, ccatalog_t, mmid))
+
     encText = urllib.parse.quote(kkeyword)
 
-    pparam_start = 1
+    param_start = 1
     list_return = []
 
-    while pparam_start <= 1000:
-        if pparam_start == 1:
-            pparam_display = 99
+    while param_start <= 1000:
+        if param_start == 1:
+            param_display = 99
         else:
-            pparam_display = 100  # 찾아오는 아이템 단위 get_nv_api (max:100)
+            param_display = 100  # 찾아오는 아이템 단위 get_nv_api (max:100)
+
         url = "https://openapi.naver.com/v1/search/shop"
         url += (
-            "?start={}".format(pparam_start)
-            + "&display={}".format(pparam_display)
+            "?start={}".format(param_start)
+            + "&display={}".format(param_display)
             + "&query="
             + encText
         )
@@ -73,38 +98,75 @@ def get_nv_api(sstore, ccatalog_t, kkeyword):
 
         data = json.loads(response_body.decode("utf-8"))  # JSON 형태의 문자열 읽기
 
-        for prd in data["items"]:
-            if (sstore in prd["mallName"]) or (
-                ccatalog_t != ""
-                and ccatalog_t in re.sub("(<([^>]+)>)", "", prd["title"])
-            ):
-                # ffind_rank = 1
-                list_return.append(
-                    {
-                        "storename": sstore,
-                        "keyword": kkeyword,
-                        "mid": prd["productId"],
-                        "rank": pparam_start,
-                    }
-                )
+        if mmid != "":  # MID로 상품 순위 찾기
+            # print("keyword={} \tmid={}".format(kkeyword, mmid))
+            for prd in data["items"]:
+                # print(
+                #     "productId={} \tmallName={}".format(
+                #         prd["productId"], prd["mallName"]
+                #     )
+                # )
+                if mmid == prd["productId"]:
+                    # print(
+                    #     "I got it! {},{},{},{}".format(
+                    #         sstore, kkeyword, mmid, param_start
+                    #     )
+                    # )
+                    list_return.append(
+                        {
+                            "storename": sstore,
+                            "keyword": kkeyword,
+                            "mid": mid,
+                            "rank": param_start,
+                            "title": re.sub("(<([^>]+)>)", "", prd["title"]),
+                        }
+                    )
+                    return list_return
 
-                num_page = (pparam_start - 1) // 40 + 1
-                num_ppos = (pparam_start - 1) % 40 + 1
-                print(
-                    "{} \tRank:{:>3} ({:>2}p {:>2}) {} / {} ({}) {}".format(
-                        datetime.datetime.now(),
-                        pparam_start,
-                        num_page,
-                        num_ppos,
-                        kkeyword,
-                        sstore,
-                        prd["productId"],
-                        re.sub("(<([^>]+)>)", "", prd["title"]),
-                    ),
-                    flush=True,
-                )
                 # pyautogui.confirm(kkeyword, pparam_start)
-            pparam_start += 1
+                param_start += 1
+        elif mmid == "":  # 모든 상품 순위 찾기
+            # print("keyword={}".format(kkeyword))
+            for prd in data["items"]:
+                # 상품 검색된 상황
+                if (sstore in prd["mallName"]) or (
+                    ccatalog_t != ""
+                    and ccatalog_t in re.sub("(<([^>]+)>)", "", prd["title"])
+                ):
+                    # ffind_rank = 1
+                    list_return.append(
+                        {
+                            "storename": sstore,
+                            "keyword": kkeyword,
+                            "mid": prd["productId"],
+                            "rank": param_start,
+                            "title": re.sub("(<([^>]+)>)", "", prd["title"]),
+                        }
+                    )
+
+                # pyautogui.confirm(kkeyword, pparam_start)
+                param_start += 1
+
+        else:
+            print("No searching - no mid")
+            return []
+
+        # # console log
+        # num_page = (param_start - 1) // 40 + 1
+        # num_ppos = (param_start - 1) % 40 + 1
+        # print(
+        #     "{} \tRank:{:>3} ({:>2}p {:>2}) {} / {} ({}) {}".format(
+        #         datetime.datetime.now(),
+        #         param_start,
+        #         num_page,
+        #         num_ppos,
+        #         kkeyword,
+        #         sstore,
+        #         mmid,
+        #         re.sub("(<([^>]+)>)", "", prd["title"]),
+        #     ),
+        #     flush=True,
+        # )
 
     return list_return
 
@@ -136,7 +198,24 @@ try:
             continue
 
         # 2. 순위 찾기 루틴
-        list_r = get_nv_api(item["storename"], item["catalog_title"], item["keyword"])
+        if is_mid == 1:  # MID로 검색
+            mid = (
+                item["ctMid"]
+                if item["nvMid"] != "" and item["ctMid"] != ""
+                else item["nvMid"]
+            )
+            mid = str(mid)
+        else:  # 모든 상품 검색
+            mid = ""
+
+        # print(
+        #     "{}-{}-{}-{}".format(
+        #         item["storename"], item["keyword"], item["catalog_title"], mid
+        #     )
+        # )
+        list_r = get_nv_api(
+            item["storename"], item["keyword"], item["catalog_title"], mid
+        )
 
         if len(list_r) < 1:
             print(
@@ -145,6 +224,23 @@ try:
 
         for l in list_r:
             list_of_search.append(l)
+
+            # console log
+            num_page = (l["rank"] - 1) // 40 + 1
+            num_ppos = (l["rank"] - 1) % 40 + 1
+
+            print(
+                "{} \tRank:{:>3} ({:>2}p {:>2}) {} / {} ({}) {}".format(
+                    datetime.datetime.now(),
+                    l["rank"],
+                    num_page,
+                    num_ppos,
+                    l["keyword"],
+                    l["storename"],
+                    l["mid"],
+                    l["title"][:30] + "..." if len(l["title"]) > 30 else l["title"],
+                )
+            )
 
 except IndexError as e:
     print("Index Error:", e)
