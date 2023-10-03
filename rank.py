@@ -11,7 +11,7 @@ import pyautogui
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # parameter 0:시트기록 x  / 1:시트기록 o
-is_write = pyautogui.prompt("(1:기록/0:무기록)", "시트에 기록하시겠습니까?", default=0)
+is_write = pyautogui.prompt("(1:기록/0:무기록)", "시트에 기록하시겠습니까?", default=1)
 
 if is_write == None:
     sys.exit(1)
@@ -48,8 +48,9 @@ elif is_mid == 0:
 else:
     pyautogui.alert("1 또는 0을 입력하세요")
     sys.exit(1)
-msg += "\n\n[OK]를 누르시고 잠시 기다려주세요"
-pyautogui.alert(msg)
+msg += "\n\n[OK]를 누르시면 순위 검색을 시작합니다 ([Cancel]은 중지)"
+if pyautogui.confirm(msg) == "Cancel":
+    sys.exit(0)
 
 # Naver Search API id, secret key (cg-lab)
 CLIENT_ID = "4L9CRB_dZ8HKe4R1WmNL"
