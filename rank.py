@@ -6,7 +6,7 @@ import re
 import warnings
 import ssl
 import sys
-import pyautogui
+import pyautogui  # pip install pyautogui
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -220,7 +220,9 @@ try:
 
         if len(list_r) < 1:
             print(
-                "Can't search '{}' in '{}'".format(item["keyword"], item["storename"])
+                "Can't search '{}' in '{}'(~1099 ranks)".format(
+                    item["keyword"], item["storename"]
+                )
             )
 
         for l in list_r:
@@ -231,9 +233,9 @@ try:
             num_ppos = (l["rank"] - 1) % 40 + 1
 
             print(
-                "{} \tRank:{:>3} ({:>2}p {:>2}) {} / {} ({}) {}".format(
+                "{}\tRank:{:>4} ({:>2}p {:>2}) {} / {} ({}) {}".format(
                     datetime.datetime.now(),
-                    l["rank"],
+                    format(l["rank"], ","),
                     num_page,
                     num_ppos,
                     l["keyword"],
