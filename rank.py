@@ -272,13 +272,14 @@ try:
             list_row.append(1)
             list_row.append(search["storename"])
             list_row.append(search["keyword"])
+            list_row.append(search["title"])
             list_row.append(search["mid"])
             list_row.append(search["rank"])
             list_values.append(list_row)
 
         # print(list_values)
         warnings.filterwarnings(action="ignore")
-        wsheet.update("A" + str(r) + ":G" + str(r + counter), list_values)
+        wsheet.update("A" + str(r) + ":H" + str(r + counter), list_values)
         warnings.filterwarnings(action="default")
 
         print("{} \tfinish for google sheet writing".format(datetime.datetime.now()))
