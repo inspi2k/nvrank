@@ -253,8 +253,8 @@ except Exception as e:
     print("Error:", e)
 
 # 3. 구글 시트에 기록
-try:
-    if is_write != 0:
+if is_write != 0:
+    try:
         print("{} \tstart for google sheet writing".format(datetime.datetime.now()))
 
         wsheet = doc.worksheet(gs_sheet_rank)
@@ -285,5 +285,57 @@ try:
         print("{} \tfinish for google sheet writing".format(datetime.datetime.now()))
 
         # pyautogui.confirm(list_values)
+    except Exception as e:
+        print("writing sheet exception:", e)
+
+# 4. traffic sheet 읽어와서 비교 - 업데이트
+# API Call Limit - 1유저 당 60초간 60회
+try:
+    print("{} \t-- update start".format(datetime.datetime.now()))
+
+    tr_doc = gc.open_by_key('1D3xNE6orWM4gPSXunAYaf1ohteqJMSEcTkzP5wejfoM')
+    # tr_doc = gc.open_by_url('https://docs.google.com/spreadsheets/d/1D3xNE6orWM4gPSXunAYaf1ohteqJMSEcTkzP5wejfoM')
+    tr_wsheet = tr_doc.worksheet('keywords')
+
+    # 직전의 page 값 복사 - 비교하기 위해
+    prev_page = tr_wsheet.col_values(10)
+    pprev = []
+    nn = [datetime.datetime.now().strftime("%Y-%m-%d %H:%M")]
+    pprev.append(nn)
+    for p in range(1,len(prev_page)):
+        nn = [int(prev_page[p])]
+        pprev.append(nn)
+    # print(pprev)
+    warnings.filterwarnings(action="ignore")
+    tr_wsheet.update('P1:P'+str(len(prev_page)),pprev)
+    warnings.filterwarnings(action="default")
+
+    tr_items = tr_wsheet.get_all_records()
+
+    for search in list_of_search:
+        for tr_i in tr_items:
+            if (search["mid"] == str(tr_i["nvMid"])) and (search["keyword"] == tr_i["keyword"]):
+                cell = tr_wsheet.find(search["mid"])
+
+                warnings.filterwarnings(action="ignore")
+                tr_wsheet.update_cell(cell.row, cell.col+2, (search["rank"]-1)//40+1)
+                warnings.filterwarnings(action="default")
+
+                print('\tupdate values - r{}c{}={}({}p)\t{}({})'.format(cell.row, cell.col+2, search["rank"], (search["rank"]-1)//40+1,search["keyword"], search["mid"]))
+
+                continue
+            elif (search["mid"] == str(tr_i["ctMid"])) and (search["keyword"] == tr_i["keyword"]):
+                cell = tr_wsheet.find(search["mid"])
+
+                warnings.filterwarnings(action="ignore")
+                tr_wsheet.update_cell(cell.row, cell.col+1, (search["rank"]-1)//40+1)
+                warnings.filterwarnings(action="default")
+
+                print('\tupdate values - r{}c{}={}({}p)\t{}({})'.format(cell.row, cell.col+1, search["rank"], (search["rank"]-1)//40+1,search["keyword"], search["mid"]))
+
+                continue
+
+    print("{} \t-- update finish".format(datetime.datetime.now()))
+    
 except Exception as e:
-    print("writing sheet exception:", e)
+    print("update error:", e)
