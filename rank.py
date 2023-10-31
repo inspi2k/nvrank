@@ -6,6 +6,7 @@ import re
 import warnings
 import ssl
 import sys
+import time
 import pyautogui  # pip install pyautogui
 
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -64,6 +65,7 @@ gs_sheet_rank = "rank"
 
 
 # Naver Search API - https://developers.naver.com
+# API Call Limit - 1초에 10회
 def get_nv_api(sstore, kkeyword, ccatalog_t, mmid):
     # print("{} - {} - {} - {}".format(sstore, kkeyword, ccatalog_t, mmid))
 
@@ -77,6 +79,10 @@ def get_nv_api(sstore, kkeyword, ccatalog_t, mmid):
             param_display = 99
         else:
             param_display = 100  # 찾아오는 아이템 단위 get_nv_api (max:100)
+        
+        if (param_start % 5) == 0:
+            time.sleep(1)
+            # print("{}\t sleep / {:>4},{} / {}".format(datetime.datetime.now(), param_start, param_display, kkeyword))
 
         url = "https://openapi.naver.com/v1/search/shop"
         url += (
@@ -220,7 +226,7 @@ try:
 
         if len(list_r) < 1:
             print(
-                "Can't search '{}' in '{}'(~1099 ranks)".format(
+                "Can't search '{}' in '{}'(~1,099 ranks / 28p 19th)".format(
                     item["keyword"], item["storename"]
                 )
             )
@@ -290,52 +296,53 @@ if is_write != 0:
 
 # 4. traffic sheet 읽어와서 비교 - 업데이트
 # API Call Limit - 1유저 당 60초간 60회
-try:
-    print("{} \t-- update start".format(datetime.datetime.now()))
+if is_write != 0:
+    try:
+        print("{} \t-- update start".format(datetime.datetime.now()))
 
-    tr_doc = gc.open_by_key('1D3xNE6orWM4gPSXunAYaf1ohteqJMSEcTkzP5wejfoM')
-    # tr_doc = gc.open_by_url('https://docs.google.com/spreadsheets/d/1D3xNE6orWM4gPSXunAYaf1ohteqJMSEcTkzP5wejfoM')
-    tr_wsheet = tr_doc.worksheet('keywords')
+        tr_doc = gc.open_by_key('1D3xNE6orWM4gPSXunAYaf1ohteqJMSEcTkzP5wejfoM')
+        # tr_doc = gc.open_by_url('https://docs.google.com/spreadsheets/d/1D3xNE6orWM4gPSXunAYaf1ohteqJMSEcTkzP5wejfoM')
+        tr_wsheet = tr_doc.worksheet('keywords')
 
-    # 직전의 page 값 복사 - 비교하기 위해
-    prev_page = tr_wsheet.col_values(10)
-    pprev = []
-    nn = [datetime.datetime.now().strftime("%Y-%m-%d %H:%M")]
-    pprev.append(nn)
-    for p in range(1,len(prev_page)):
-        nn = [int(prev_page[p])]
+        # 직전의 page 값 복사 - 비교하기 위해
+        prev_page = tr_wsheet.col_values(10)
+        pprev = []
+        nn = [datetime.datetime.now().strftime("%Y-%m-%d %H:%M")]
         pprev.append(nn)
-    # print(pprev)
-    warnings.filterwarnings(action="ignore")
-    tr_wsheet.update('P1:P'+str(len(prev_page)),pprev)
-    warnings.filterwarnings(action="default")
+        for p in range(1,len(prev_page)):
+            nn = [int(prev_page[p])]
+            pprev.append(nn)
+        # print(pprev)
+        warnings.filterwarnings(action="ignore")
+        tr_wsheet.update('P1:P'+str(len(prev_page)),pprev)
+        warnings.filterwarnings(action="default")
 
-    tr_items = tr_wsheet.get_all_records()
+        tr_items = tr_wsheet.get_all_records()
 
-    for search in list_of_search:
-        for tr_i in tr_items:
-            if (search["mid"] == str(tr_i["nvMid"])) and (search["keyword"] == tr_i["keyword"]):
-                cell = tr_wsheet.find(search["mid"])
+        for search in list_of_search:
+            for tr_i in tr_items:
+                if (search["mid"] == str(tr_i["nvMid"])) and (search["keyword"] == tr_i["keyword"]):
+                    cell = tr_wsheet.find(search["mid"])
 
-                warnings.filterwarnings(action="ignore")
-                tr_wsheet.update_cell(cell.row, cell.col+2, (search["rank"]-1)//40+1)
-                warnings.filterwarnings(action="default")
+                    warnings.filterwarnings(action="ignore")
+                    tr_wsheet.update_cell(cell.row, cell.col+2, (search["rank"]-1)//40+1)
+                    warnings.filterwarnings(action="default")
 
-                print('\tupdate values - r{}c{}={}({}p)\t{}({})'.format(cell.row, cell.col+2, search["rank"], (search["rank"]-1)//40+1,search["keyword"], search["mid"]))
+                    print('\tupdate values - r{}c{}={}({}p)\t{}({})'.format(cell.row, cell.col+2, search["rank"], (search["rank"]-1)//40+1,search["keyword"], search["mid"]))
 
-                continue
-            elif (search["mid"] == str(tr_i["ctMid"])) and (search["keyword"] == tr_i["keyword"]):
-                cell = tr_wsheet.find(search["mid"])
+                    continue
+                elif (search["mid"] == str(tr_i["ctMid"])) and (search["keyword"] == tr_i["keyword"]):
+                    cell = tr_wsheet.find(search["mid"])
 
-                warnings.filterwarnings(action="ignore")
-                tr_wsheet.update_cell(cell.row, cell.col+1, (search["rank"]-1)//40+1)
-                warnings.filterwarnings(action="default")
+                    warnings.filterwarnings(action="ignore")
+                    tr_wsheet.update_cell(cell.row, cell.col+1, (search["rank"]-1)//40+1)
+                    warnings.filterwarnings(action="default")
 
-                print('\tupdate values - r{}c{}={}({}p)\t{}({})'.format(cell.row, cell.col+1, search["rank"], (search["rank"]-1)//40+1,search["keyword"], search["mid"]))
+                    print('\tupdate values - r{}c{}={}({}p)\t{}({})'.format(cell.row, cell.col+1, search["rank"], (search["rank"]-1)//40+1,search["keyword"], search["mid"]))
 
-                continue
+                    continue
 
-    print("{} \t-- update finish".format(datetime.datetime.now()))
-    
-except Exception as e:
-    print("update error:", e)
+        print("{} \t-- update finish".format(datetime.datetime.now()))
+        
+    except Exception as e:
+        print("update error:", e)
