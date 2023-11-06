@@ -328,7 +328,7 @@ if is_write != 0:
                     tr_wsheet.update_cell(cell.row, cell.col+2, (search["rank"]-1)//40+1)
                     warnings.filterwarnings(action="default")
 
-                    print('\tupdate values - r{}c{}={}({}p)\t{}({})'.format(cell.row, cell.col+2, search["rank"], (search["rank"]-1)//40+1,search["keyword"], search["mid"]))
+                    # print('\tupdate values - r{}c{}={}({}p)\t{}({})'.format(cell.row, cell.col+2, search["rank"], (search["rank"]-1)//40+1,search["keyword"], search["mid"]))
 
                     continue
                 elif (search["mid"] == str(tr_i["ctMid"])) and (search["keyword"] == tr_i["keyword"]):
@@ -338,7 +338,7 @@ if is_write != 0:
                     tr_wsheet.update_cell(cell.row, cell.col+1, (search["rank"]-1)//40+1)
                     warnings.filterwarnings(action="default")
 
-                    print('\tupdate values - r{}c{}={}({}p)\t{}({})'.format(cell.row, cell.col+1, search["rank"], (search["rank"]-1)//40+1,search["keyword"], search["mid"]))
+                    # print('\tupdate values - r{}c{}={}({}p)\t{}({})'.format(cell.row, cell.col+1, search["rank"], (search["rank"]-1)//40+1,search["keyword"], search["mid"]))
 
                     continue
 
