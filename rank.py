@@ -80,8 +80,8 @@ def get_nv_api(sstore, kkeyword, ccatalog_t, mmid):
         else:
             param_display = 100  # 찾아오는 아이템 단위 get_nv_api (max:100)
         
-        if (param_start % 5) == 0:
-            print (",",end="")
+        if (param_start % 10) == 0:
+            print(",", end="", flush=True)
             # print("{}\t sleep / {:>4},{} / {}".format(datetime.datetime.now(), param_start, param_display, kkeyword))
             time.sleep(1)
 
